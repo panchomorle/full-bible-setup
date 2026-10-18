@@ -1,4 +1,5 @@
 import os
+import sys
 import csv
 import json
 import urllib.request
@@ -119,9 +120,10 @@ def main():
             txt = row['text'].strip()
             bible[b_num][ch].append((v, txt))
 
+    clean_mode = '--clean' in sys.argv
     egw_json_path = os.path.join(data_dir, 'egw_comments_cba7a.json')
     cba_egw = {}
-    if os.path.exists(egw_json_path):
+    if not clean_mode and os.path.exists(egw_json_path):
         print(f"Cargando comentarios de EGW desde {egw_json_path}...")
         with open(egw_json_path, 'r', encoding='utf-8') as f:
             cba_egw = json.load(f)
@@ -129,6 +131,8 @@ def main():
 
         print("Sincronizando notas desacopladas de EGW en 70. Bible/Comentarios/EGW/...")
         generate_egw_notes(cba_egw)
+    elif clean_mode:
+        print("Modo limpio activado (--clean): generando RVG pura sin comentarios de EGW.")
 
     vault_bible_rvg = os.path.abspath(r'C:\Users\eljua\Documents\UAP\70. Bible\RVG')
     os.makedirs(vault_bible_rvg, exist_ok=True)
