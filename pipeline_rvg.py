@@ -3,6 +3,7 @@ import csv
 import json
 import urllib.request
 from collections import defaultdict
+from generate_egw_notes import generate_egw_notes
 
 BOOK_NAMES = {
     1: 'Génesis', 2: 'Éxodo', 3: 'Levítico', 4: 'Números', 5: 'Deuteronomio',
@@ -58,71 +59,6 @@ BOOK_NUM_TO_OSIS = {
 
 OSIS_TO_BOOK_NAME = {BOOK_NUM_TO_OSIS[k]: BOOK_NAMES[k] for k in BOOK_NAMES}
 OSIS_TO_BOOK_NAME['3Juan'] = '3 Juan'
-
-# Curated foundational EGW Bible comments
-EGW_COMMENTS = {
-    ('Génesis', 1, 1): (
-        "La obra de la creación no puede ser explicada por la ciencia. ¿Qué ciencia puede explicar el misterio del origen de la vida? "
-        "En la creación de la tierra, Dios no dependió de materia preexistente. 'Él dijo, y fue hecho; Él mandó, y existió' (Salmos 33:9). "
-        "Todas las cosas, materiales y espirituales, comparecieron ante el Señor Jehová a su propia voz y fueron creadas para su propio propósito. "
-        "— *Patriarcas y Profetas*, p. 115."
-    ),
-    ('Génesis', 1, 26): (
-        "El hombre fue hecho a la imagen de Dios, tanto en su naturaleza exterior como en su carácter espiritual. "
-        "Solamente Cristo es 'la imagen misma de su sustancia'; pero el hombre fue formado a semejanza de Dios. Su naturaleza estaba en armonía con la voluntad divina, "
-        "su mente era capaz de comprender las cosas divinas y sus afectos eran puros. "
-        "— *Patriarcas y Profetas*, p. 25."
-    ),
-    ('Génesis', 2, 2): (
-        "Dios descansó en el séptimo día, y santificó y bendijo el día de su reposo, para que el hombre, a semejanza de su Hacedor, descansase en este día sagrado, "
-        "y mirando al cielo y a la tierra pudiera reflexionar sobre la gran obra de la creación de Dios. "
-        "— *Comentario Bíblico Adventista*, tomo 1, p. 1094."
-    ),
-    ('Génesis', 3, 15): (
-        "Esta primera promesa evangélica fue un rayo de luz en medio de la densa oscuridad del pecado. "
-        "La enemistad de la cual habla la profecía no es natural entre Satanás y el hombre. Cuando el hombre violó la ley divina, su naturaleza se hizo depravada y estuvo en armonía con Satanás. "
-        "La gracia que Cristo infunde en el alma es la que crea la enemistad contra el pecado. "
-        "— *El Conflicto de los Siglos*, p. 559."
-    ),
-    ('Éxodo', 20, 8): (
-        "El sábado no fue dado solamente para Israel, sino para el mundo entero. Había sido dado a conocer al hombre en el Edén, "
-        "y como los demás preceptos del Decálogo, es de obligación inmutable... En el sábado se nos presenta el Creador de los cielos y de la tierra, "
-        "distinguiéndose así del Dios verdadero de todos los dioses falsos. "
-        "— *Deseado de Todas las Gentes*, p. 248."
-    ),
-    ('Daniel', 8, 14): (
-        "La purificación del santuario terrenal se realizaba con sangre de animales; pero la del celestial debe realizarse con la sangre de Cristo. "
-        "Así como en el día de la expiación típico los pecados del pueblo eran borrados del santuario terrenal, así en el gran día final los pecados de los penitentes son borrados del santuario celestial. "
-        "Este juicio investigador comenzó en 1844 al cumplirse las 2.300 tardes y mañanas. "
-        "— *El Conflicto de los Siglos*, pp. 473-475."
-    ),
-    ('Juan', 1, 1): (
-        "Desde la eternidad había una perfecta unidad entre el Padre y el Hijo. Eran dos, pero poco menos que idénticos; uno en espíritu, en corazón, en carácter. "
-        "Cristo era el Verbo de Dios: el pensamiento de Dios hecho audible. "
-        "— *El Deseado de Todas las Gentes*, p. 11."
-    ),
-    ('Juan', 3, 16): (
-        "Toda la ley y los profetas se concentran en el amor inmenso de Dios manifestado en Cristo. La cruz del Calvario permanecerá por la eternidad como el monumento del amor inagotable del Padre. "
-        "El don de Cristo al mundo no fue una provisión posterior al pecado; fue el plan eterno puesto en acción para la redención de la raza humana. "
-        "En este don incomparable, el cielo entregó todo su tesoro. "
-        "— *El Camino a Cristo*, p. 13; *El Deseado de Todas las Gentes*, p. 15."
-    ),
-    ('Romanos', 8, 28): (
-        "El Padre celestial tiene mil maneras de proveer para nosotros de las cuales nada sabemos. "
-        "Los que aceptan el principio de dar al servicio de Dios el lugar supremo, verán desaparecer sus perplejidades y hallarán un camino despejado ante sus pies. "
-        "— *El Ministerio de Curación*, p. 381."
-    ),
-    ('Apocalipsis', 14, 6): (
-        "Los mensajes de los tres ángeles de Apocalipsis 14 representan el carácter de la obra que ha de ser hecha antes de la venida de Cristo. "
-        "El primer mensaje proclama el juicio de Dios e invita a la reverencia y a la adoración al Creador del cielo y de la tierra. Es la verdad presente para este tiempo final. "
-        "— *Joyas de los Testimonios*, tomo 3, p. 165."
-    ),
-    ('Apocalipsis', 14, 12): (
-        "Aquí está la paciencia de los santos; aquí están los que guardan los mandamientos de Dios y la fe de Jesús. "
-        "Este texto define al remanente fiel en el conflicto final sobre la adoración y la ley de Dios. Guardar la ley de Dios y tener la fe viva de Jesús es el secreto de la victoria. "
-        "— *El Conflicto de los Siglos*, p. 490."
-    )
-}
 
 def format_osis_ref(target_ref):
     if '-' in target_ref:
@@ -191,13 +127,16 @@ def main():
             cba_egw = json.load(f)
         print(f"Cargados comentarios para {len(cba_egw)} libros bíblicos.")
 
+        print("Sincronizando notas desacopladas de EGW en 70. Bible/Comentarios/EGW/...")
+        generate_egw_notes(cba_egw)
+
     vault_bible_rvg = os.path.abspath(r'C:\Users\eljua\Documents\UAP\70. Bible\RVG')
     os.makedirs(vault_bible_rvg, exist_ok=True)
     print(f"Generando Markdown en: {vault_bible_rvg}")
 
     total_chapters = 0
     total_verses = 0
-    total_egw_callouts = 0
+    total_egw_badges = 0
 
     for b_num in range(1, 67):
         book_name = BOOK_NAMES[b_num]
@@ -222,56 +161,47 @@ def main():
                 nav_lines.append(f"- [Siguiente](../{book_esc}/{book_esc}%20{ch+1}.md)")
 
             footnotes = []
-            egw_callouts = []
             footnote_idx = 1
 
             verse_lines = []
+            ch_comments = cba_egw.get(book_name, {}).get(str(ch), {})
+
             for v_num, v_text in bible[b_num][ch]:
                 total_verses += 1
                 osis_key = f"{osis_code}.{ch}.{v_num}"
                 ref_list = xrefs.get(osis_key, [])
-                egw_items = cba_egw.get(book_name, {}).get(str(ch), {}).get(str(v_num), [])
-                if not egw_items and (book_name, ch, v_num) in EGW_COMMENTS:
-                    egw_items = [{'text': EGW_COMMENTS[(book_name, ch, v_num)], 'source': '', 'title': None}]
 
+                # Clean CommonMark cross-reference footnotes
                 fn_tag = ""
-                if ref_list or egw_items:
+                if ref_list:
                     fn_name = f"ref_{footnote_idx}"
-                    fn_tag = f" [^{fn_name}]"
-                    fn_content = []
-                    if ref_list:
-                        fn_content.append("; ".join(ref_list))
-                    if egw_items:
-                        fn_content.append(f"[Comentario de EGW](#^egw-{ch}-{v_num})")
-                        callout_lines = [
-                            f"> [!quote]- Comentario de Elena G. de White — {book_name} {ch}:{v_num} ^egw-{ch}-{v_num}"
-                        ]
-                        for idx_c, comm in enumerate(egw_items):
-                            if idx_c > 0:
-                                callout_lines.append(">")
-                                callout_lines.append("> ***")
-                                callout_lines.append(">")
-                            title = comm.get('title')
-                            source = comm.get('source')
-                            text = comm.get('text', '').strip()
-                            if title:
-                                callout_lines.append(f"> ### {title}")
-                            callout_lines.append(f"> {text}")
-                            if source and source != 'CBA Tomo 7A':
-                                callout_lines.append(f"> — *{source}*.")
-                        egw_callouts.append("\n".join(callout_lines))
-                        total_egw_callouts += 1
-
-                    if ref_list and egw_items:
-                        footnotes.append(f"[^{fn_name}]: {fn_content[0]}. {fn_content[1]}.")
-                    elif ref_list:
-                        footnotes.append(f"[^{fn_name}]: {fn_content[0]}")
-                    else:
-                        footnotes.append(f"[^{fn_name}]: {fn_content[0]}.")
+                    fn_tag = f"[^{fn_name}]"
+                    footnotes.append(f"[^{fn_name}]: {'; '.join(ref_list)}")
                     footnote_idx += 1
 
+                # Match EGW commentary blocks covering this verse
+                matching_anchors = []
+                for range_key, items in ch_comments.items():
+                    if not items:
+                        continue
+                    covered_verses = items[0].get('verses')
+                    if not covered_verses:
+                        r_start = items[0]['range'][0]
+                        r_end = items[0]['range'][-1]
+                        covered_verses = range(r_start, r_end + 1)
+                    if v_num in covered_verses:
+                        anchor = items[0].get('anchor') or f"egw-{ch}-{range_key}"
+                        if anchor not in matching_anchors:
+                            matching_anchors.append(anchor)
+
+                badge_str = ""
+                if matching_anchors:
+                    badges = [f"[[{book_name} {ch} (EGW)#^{anc}|🕊️]]" for anc in matching_anchors]
+                    badge_str = " " + " ".join(badges)
+                    total_egw_badges += len(badges)
+
                 prefix = f"**{ch}** " if v_num == 1 else ""
-                verse_lines.append(f"{prefix}<sup>{v_num}</sup> {v_text}{fn_tag}")
+                verse_lines.append(f"{prefix}<sup>{v_num}</sup> {v_text}{fn_tag}{badge_str}")
 
             # Group verses into readable paragraphs
             paragraphs = []
@@ -307,16 +237,10 @@ def main():
                 content.extend(footnotes)
                 content.append("")
 
-            if egw_callouts:
-                content.append("## Comentarios de Elena G. de White")
-                content.append("")
-                content.extend(egw_callouts)
-                content.append("")
-
             with open(file_path, 'w', encoding='utf-8') as out_f:
                 out_f.write("\n".join(content))
 
-    print(f"\n¡Éxito total! Se generaron {total_chapters} capítulos, {total_verses} versículos y {total_egw_callouts} callouts de EGW en {vault_bible_rvg}.")
+    print(f"\n¡Éxito total! Se generaron {total_chapters} capítulos, {total_verses} versículos y {total_egw_badges} badges de EGW en {vault_bible_rvg}.")
 
 if __name__ == '__main__':
     main()

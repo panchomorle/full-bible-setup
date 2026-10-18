@@ -24,5 +24,7 @@ data.json
 # Large datasets & raw artifacts
 *.pdf
 *raw*.txt
+data/cross_references.txt
+data/super_bible_RVG.csv
 __pycache__/
 
