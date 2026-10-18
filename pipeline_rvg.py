@@ -52,9 +52,12 @@ BOOK_NUM_TO_OSIS = {
     46: '1Cor', 47: '2Cor', 48: 'Gal', 49: 'Eph', 50: 'Phil',
     51: 'Col', 52: '1Thess', 53: '2Thess', 54: '1Tim', 55: '2Tim',
     56: 'Titus', 57: 'Phlm', 58: 'Heb', 59: 'Jas', 60: '1Pet',
-    61: '2Pet', 62: '1John', 63: '2John', 64: '3Juan', 65: 'Jude',
+    61: '2Pet', 62: '1John', 63: '2John', 64: '3John', 65: 'Jude',
     66: 'Rev'
 }
+
+OSIS_TO_BOOK_NAME = {BOOK_NUM_TO_OSIS[k]: BOOK_NAMES[k] for k in BOOK_NAMES}
+OSIS_TO_BOOK_NAME['3Juan'] = '3 Juan'
 
 # Curated foundational EGW Bible comments
 EGW_COMMENTS = {
@@ -126,20 +129,29 @@ def format_osis_ref(target_ref):
         parts = target_ref.split('-')
         p1 = parts[0].split('.')
         p2 = parts[1].split('.')
-        b1 = OSIS_TO_SPANISH.get(p1[0], p1[0])
+        osis = p1[0]
+        full_book = OSIS_TO_BOOK_NAME.get(osis, osis)
         ch1 = p1[1] if len(p1) > 1 else ''
         v1 = p1[2] if len(p1) > 2 else ''
         ch2 = p2[1] if len(p2) > 1 else ''
         v2 = p2[2] if len(p2) > 2 else ''
         if ch1 == ch2:
-            return f"{b1} {ch1}:{v1}-{v2}"
-        return f"{b1} {ch1}:{v1}-{ch2}:{v2}"
+            label = f"{full_book} {ch1}:{v1}-{v2}"
+        else:
+            label = f"{full_book} {ch1}:{v1}-{ch2}:{v2}"
+        target_ch = ch1
     else:
         parts = target_ref.split('.')
-        b = OSIS_TO_SPANISH.get(parts[0], parts[0])
+        osis = parts[0]
+        full_book = OSIS_TO_BOOK_NAME.get(osis, osis)
         ch = parts[1] if len(parts) > 1 else ''
         v = parts[2] if len(parts) > 2 else ''
-        return f"{b} {ch}:{v}" if v else f"{b} {ch}"
+        label = f"{full_book} {ch}:{v}" if v else f"{full_book} {ch}"
+        target_ch = ch
+
+    book_esc = full_book.replace(' ', '%20')
+    link_path = f"../{book_esc}/{book_esc}%20{target_ch}.md"
+    return f"[{label}]({link_path})"
 
 def main():
     data_dir = os.path.join(os.path.dirname(__file__), 'data')
@@ -228,7 +240,7 @@ def main():
                     fn_tag = f" [^{fn_name}]"
                     fn_content = []
                     if ref_list:
-                        fn_content.append(f"Véase {'; '.join(ref_list)}")
+                        fn_content.append("; ".join(ref_list))
                     if egw_items:
                         fn_content.append(f"[Comentario de EGW](#^egw-{ch}-{v_num})")
                         callout_lines = [
@@ -250,7 +262,12 @@ def main():
                         egw_callouts.append("\n".join(callout_lines))
                         total_egw_callouts += 1
 
-                    footnotes.append(f"[^{fn_name}]: {'. '.join(fn_content)}.")
+                    if ref_list and egw_items:
+                        footnotes.append(f"[^{fn_name}]: {fn_content[0]}. {fn_content[1]}.")
+                    elif ref_list:
+                        footnotes.append(f"[^{fn_name}]: {fn_content[0]}")
+                    else:
+                        footnotes.append(f"[^{fn_name}]: {fn_content[0]}.")
                     footnote_idx += 1
 
                 prefix = f"**{ch}** " if v_num == 1 else ""
