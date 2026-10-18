@@ -4,10 +4,13 @@ import PassageReference, { PassageFormat } from './passage-reference';
 import PassageResolver, { ResolvedPassage } from './passage-resolver';
 import BibleSearchEngine, { SearchResult } from './bible-search-engine';
 import OmniboxParser, { OmniboxPassageTarget } from './omnibox-parser';
+import BibleReaderView, { BibleReaderTarget } from './bible-reader-view';
 
 export interface PluginLike {
+	app?: App;
 	settings: LocalBibleRefSettings;
 	searchEngine?: BibleSearchEngine;
+	openBibleReader?: (target?: BibleReaderTarget) => Promise<any>;
 }
 
 export interface OmniboxSuggestionItem {
@@ -32,6 +35,7 @@ export default class QuickVerseSearchModal extends SuggestModal<OmniboxSuggestio
 	private readonly searchEngine: BibleSearchEngine;
 	private readonly settings: LocalBibleRefSettings;
 	private readonly concordanceMode: boolean;
+	private readonly pluginLike: PluginLike | LocalBibleRefSettings;
 
 	constructor(
 		app: App,
@@ -40,6 +44,7 @@ export default class QuickVerseSearchModal extends SuggestModal<OmniboxSuggestio
 	) {
 		super(app);
 		this.concordanceMode = concordanceMode;
+		this.pluginLike = pluginOrSettings;
 
 		if ('settings' in pluginOrSettings) {
 			this.settings = pluginOrSettings.settings;
@@ -191,28 +196,52 @@ export default class QuickVerseSearchModal extends SuggestModal<OmniboxSuggestio
 		}
 	}
 
-	onChooseSuggestion(
+	async onChooseSuggestion(
 		item: OmniboxSuggestionItem,
-		_: MouseEvent | KeyboardEvent
-	): void {
-		// Emit workspace event for BibleReaderView (Ticket 02/03)
-		this.app.workspace.trigger('local-bible-ref:open-reader', {
+		evt: MouseEvent | KeyboardEvent
+	): Promise<void> {
+		const target: BibleReaderTarget = {
 			bookName: item.bookName,
 			bookId: item.bookId,
 			chapter: item.chapter,
 			verse: item.verse,
-		});
+		};
 
-		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-		const textToInsert =
-			item.formattedText || item.resolvedPassage?.text || item.title;
+		// If user holds Shift, Alt, or Cmd/Ctrl: insert formatted passage into active editor
+		const isModifierPressed =
+			evt && (evt.shiftKey || evt.altKey || evt.ctrlKey || evt.metaKey);
+		if (isModifierPressed) {
+			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+			const textToInsert =
+				item.formattedText || item.resolvedPassage?.text || item.title;
 
-		if (activeView && activeView.editor) {
-			activeView.editor.replaceSelection(textToInsert);
-			new Notice(`Insertado: ${item.title}`);
-		} else {
-			navigator.clipboard.writeText(textToInsert);
-			new Notice(`Seleccionado: ${item.title}`);
+			if (activeView && activeView.editor) {
+				activeView.editor.replaceSelection(textToInsert);
+				new Notice(`Insertado: ${item.title}`);
+				return;
+			}
 		}
+
+		// Default primary action: Open and reveal BibleReaderView in right sidebar!
+		try {
+			if (
+				'openBibleReader' in this.pluginLike &&
+				typeof this.pluginLike.openBibleReader === 'function'
+			) {
+				await this.pluginLike.openBibleReader(target);
+			} else {
+				await BibleReaderView.activateView(
+					this.app,
+					this.pluginLike as any,
+					target
+				);
+			}
+			new Notice(`Abierto en el lector bíblico: ${item.title}`);
+		} catch (err) {
+			console.error('Failed to open BibleReaderView:', err);
+		}
+
+		// Also emit workspace event for any listener
+		this.app.workspace.trigger('local-bible-ref:open-reader', target);
 	}
 }

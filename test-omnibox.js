@@ -16,6 +16,8 @@ Module.prototype.require = function (id) {
 			AbstractInputSuggest: class {},
 			SuggestModal: class {},
 			MarkdownView: class {},
+			ItemView: class {},
+			MarkdownRenderer: { renderMarkdown: () => Promise.resolve() },
 		};
 	}
 	return originalRequire.apply(this, arguments);
