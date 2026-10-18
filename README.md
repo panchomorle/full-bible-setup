@@ -1,8 +1,8 @@
-# Local Bible Ref
+# Full Bible Setup
 
-Quickly and easily reference Bible passages stored locally in your vault.
+Integrated study Bible platform for Obsidian: fast referencing, interactive sidebar reader, multi-version comparison, and commentary merger.
 
-![localBibleRef1](https://github.com/user-attachments/assets/b8b5440b-8f47-4462-987e-a52791d758be)
+*Originally forked from [local-bible-ref](https://github.com/c4mpbellsoup/local-bible-ref) by Caleb Campbell.*
 
 ## Basics
 

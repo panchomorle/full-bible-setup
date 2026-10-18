@@ -1,10 +1,10 @@
 {
-	"id": "local-bible-ref",
-	"name": "Local Bible Ref",
+	"id": "full-bible-setup",
+	"name": "Full Bible Setup",
 	"version": "1.3.2",
 	"minAppVersion": "1.9.14",
-	"description": "Quickly and easily reference Bible passages stored locally in your vault.",
-	"author": "Caleb Campbell",
-	"authorUrl": "https://mastodon.social/@calebcampbell",
+	"description": "Integrated study Bible platform: fast referencing, interactive sidebar reader, multi-version comparison, and commentary merger.",
+	"author": "panchomorle",
+	"authorUrl": "https://github.com/panchomorle",
 	"isDesktopOnly": false
 }
