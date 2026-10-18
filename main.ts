@@ -6,7 +6,31 @@ import PassageReference, { PassageFormat } from 'src/passage-reference';
 import PassageResolver from 'src/passage-resolver';
 import BibleSearchEngine from 'src/bible-search-engine';
 import OmniboxParser from 'src/omnibox-parser';
-export { PassageReference, PassageResolver, BibleSearchEngine, OmniboxParser };
+import {
+	getAdjacentChapter,
+	getBookChapterCount,
+	resolveBook,
+	BIBLE_BOOK_ORDER,
+	BIBLE_BOOK_CHAPTERS,
+} from 'src/adjacent-chapter';
+import BibleReaderView, {
+	VIEW_TYPE_BIBLE_READER,
+	BibleReaderTarget,
+} from 'src/bible-reader-view';
+export {
+	PassageReference,
+	PassageResolver,
+	BibleSearchEngine,
+	OmniboxParser,
+	getAdjacentChapter,
+	getBookChapterCount,
+	resolveBook,
+	BIBLE_BOOK_ORDER,
+	BIBLE_BOOK_CHAPTERS,
+	BibleReaderView,
+	VIEW_TYPE_BIBLE_READER,
+};
+export type { BibleReaderTarget };
 import PassageSuggest from 'src/passage-suggest';
 import QuickVerseSearchModal from 'src/quick-search-modal';
 import SwitchVersionModal from 'src/switch-version-modal';
@@ -24,6 +48,12 @@ export default class LocalBibleRefPlugin extends Plugin {
 		this.searchEngine = new BibleSearchEngine(this.app, this.settings);
 		this.addSettingTab(new LocalBibleRefSettingTab(this.app, this));
 		this.registerEditorSuggest(new PassageSuggest(this.app, this.settings));
+
+		// Register Sidebar Bible Reader View
+		this.registerView(
+			VIEW_TYPE_BIBLE_READER,
+			(leaf) => new BibleReaderView(leaf, this)
+		);
 
 		// Build in-memory concordance index asynchronously without blocking UI
 		this.searchEngine.buildIndex();
@@ -53,12 +83,24 @@ export default class LocalBibleRefPlugin extends Plugin {
 		});
 
 		this.addCommand({
+			id: 'open-bible-reader',
+			name: 'Abrir lector bíblico en barra lateral / Open Bible Reader in sidebar',
+			callback: () => {
+				BibleReaderView.activateView(this.app, this);
+			},
+		});
+
+		this.addCommand({
 			id: 'switch-default-version',
 			name: 'Cambiar versión bíblica por defecto / Switch default Bible version',
 			callback: () => {
 				new SwitchVersionModal(this.app, this).open();
 			},
 		});
+	}
+
+	async openBibleReader(target?: BibleReaderTarget) {
+		return BibleReaderView.activateView(this.app, this, target);
 	}
 
 	onunload() {}

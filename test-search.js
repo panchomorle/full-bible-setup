@@ -11,6 +11,7 @@ Module.prototype.require = function (id) {
 			getLanguage: () => 'es',
 			normalizePath: (p) => p.replace(/\\/g, '/').replace(/\/+/g, '/'),
 			Plugin: class {},
+			ItemView: class {},
 			PluginSettingTab: class {},
 			Setting: class { setName() { return this; } setDesc() { return this; } addText() { return this; } addDropdown() { return this; } addToggle() { return this; } },
 			SettingGroup: class { setHeading() { return this; } addSetting() { return this; } },
