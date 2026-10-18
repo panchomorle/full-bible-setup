@@ -218,3 +218,154 @@ div.setting-item.local-bible-ref-setting.is-disabled {
 	animation: localBiblePulse 2.5s ease-out forwards;
 	border-radius: 3px;
 }
+
+
+/* Floating Highlight Toolbar & Highlight Colors */
+.local-bible-highlight-toolbar {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 5px 8px;
+	background-color: var(--background-secondary-alt, var(--background-secondary));
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+	user-select: none;
+	animation: localBibleFadeIn 0.12s ease-out;
+}
+
+@keyframes localBibleFadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(4px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.local-bible-chips-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.local-bible-color-chip {
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	border: 2px solid transparent;
+	cursor: pointer;
+	padding: 0;
+	box-sizing: border-box;
+	transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.local-bible-color-chip:hover {
+	transform: scale(1.2);
+	border-color: var(--text-normal);
+}
+
+.local-bible-unmark-btn {
+	background: transparent;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	font-size: 0.75rem;
+	padding: 2px 7px;
+	color: var(--text-error, #e53935);
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+}
+
+.local-bible-unmark-btn:hover {
+	background-color: var(--background-modifier-error-hover, rgba(229, 57, 53, 0.15));
+}
+
+.local-bible-dismiss-btn {
+	background: transparent;
+	border: none;
+	font-size: 0.8rem;
+	line-height: 1;
+	color: var(--text-muted);
+	cursor: pointer;
+	padding: 2px 4px;
+	border-radius: 3px;
+}
+
+.local-bible-dismiss-btn:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+
+/* 5 Accessible Highlight Colors */
+mark.hl-yellow,
+.hl-yellow {
+	background-color: rgba(255, 214, 0, 0.4) !important;
+	color: inherit;
+	border-radius: 2px;
+	padding: 0 1px;
+	cursor: pointer;
+}
+
+mark.hl-green,
+.hl-green {
+	background-color: rgba(76, 175, 80, 0.38) !important;
+	color: inherit;
+	border-radius: 2px;
+	padding: 0 1px;
+	cursor: pointer;
+}
+
+mark.hl-cyan,
+.hl-cyan {
+	background-color: rgba(0, 188, 212, 0.38) !important;
+	color: inherit;
+	border-radius: 2px;
+	padding: 0 1px;
+	cursor: pointer;
+}
+
+mark.hl-pink,
+.hl-pink {
+	background-color: rgba(233, 30, 99, 0.35) !important;
+	color: inherit;
+	border-radius: 2px;
+	padding: 0 1px;
+	cursor: pointer;
+}
+
+mark.hl-orange,
+.hl-orange {
+	background-color: rgba(255, 152, 0, 0.42) !important;
+	color: inherit;
+	border-radius: 2px;
+	padding: 0 1px;
+	cursor: pointer;
+}
+
+/* Dark mode contrast enhancement */
+.theme-dark mark.hl-yellow,
+.theme-dark .hl-yellow {
+	background-color: rgba(255, 214, 0, 0.45) !important;
+}
+
+.theme-dark mark.hl-green,
+.theme-dark .hl-green {
+	background-color: rgba(0, 200, 83, 0.4) !important;
+}
+
+.theme-dark mark.hl-cyan,
+.theme-dark .hl-cyan {
+	background-color: rgba(0, 229, 255, 0.38) !important;
+}
+
+.theme-dark mark.hl-pink,
+.theme-dark .hl-pink {
+	background-color: rgba(255, 64, 129, 0.4) !important;
+}
+
+.theme-dark mark.hl-orange,
+.theme-dark .hl-orange {
+	background-color: rgba(255, 109, 0, 0.45) !important;
+}

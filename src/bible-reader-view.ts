@@ -13,6 +13,7 @@ import {
 	getAdjacentChapter,
 	resolveBook,
 } from './adjacent-chapter';
+import HighlightToolbar, { HighlightColor } from './highlight-toolbar';
 
 export const VIEW_TYPE_BIBLE_READER = 'local-bible-reader-view';
 
@@ -42,6 +43,16 @@ export default class BibleReaderView extends ItemView {
 	private currentVersion: string = '';
 	private currentFilePath: string = '';
 	private isContentLoaded: boolean = false;
+
+	public highlightToolbar: HighlightToolbar;
+	public onHighlightChange?: (action: {
+		type: 'create' | 'modify' | 'remove';
+		color?: HighlightColor;
+		text?: string;
+		markEl?: HTMLElement;
+		book: Book;
+		chapter: number;
+	}) => void;
 
 	constructor(leaf: WorkspaceLeaf, plugin: ILocalBibleRefPlugin) {
 		super(leaf);
@@ -90,6 +101,14 @@ export default class BibleReaderView extends ItemView {
 			cls: 'local-bible-reader-footer',
 		});
 
+		this.highlightToolbar = new HighlightToolbar(this.containerEl, {
+			onHighlight: (color, text, range) =>
+				this.applyHighlight(color, text, range),
+			onModifyHighlight: (markEl, newColor) =>
+				this.modifyHighlight(markEl, newColor),
+			onRemoveHighlight: (markEl) => this.removeHighlight(markEl),
+		});
+
 		// Hover preview support for Obsidian links and footnotes
 		this.registerDomEvent(this.bodyEl, 'mouseover', (event: MouseEvent) => {
 			const target = event.target as HTMLElement;
@@ -112,6 +131,87 @@ export default class BibleReaderView extends ItemView {
 			});
 		});
 
+		// Selection detection: Trigger floating toolbar on text selection
+		this.registerDomEvent(this.bodyEl, 'mouseup', (event: MouseEvent) => {
+			const target = event.target as HTMLElement;
+			if (
+				target.closest &&
+				target.closest(
+					'mark.hl-yellow, mark.hl-green, mark.hl-cyan, mark.hl-pink, mark.hl-orange, mark[class*="hl-"]'
+				)
+			) {
+				return;
+			}
+
+			if (typeof window !== 'undefined' && window.getSelection) {
+				const selection = window.getSelection();
+				if (!selection || selection.isCollapsed || !selection.rangeCount) {
+					return;
+				}
+
+				const text = selection.toString().trim();
+				if (!text) return;
+
+				const range = selection.getRangeAt(0);
+				if (
+					typeof this.bodyEl.contains === 'function' &&
+					!this.bodyEl.contains(range.commonAncestorContainer)
+				) {
+					return;
+				}
+
+				const rect =
+					typeof range.getBoundingClientRect === 'function'
+						? range.getBoundingClientRect()
+						: { top: 100, bottom: 120, left: 50, right: 200, width: 150, height: 20 };
+
+				this.highlightToolbar.showForSelection(rect, text, range);
+			}
+		});
+
+		// Click on existing highlight to open edit/unmark contextual menu
+		this.registerDomEvent(this.bodyEl, 'click', (event: MouseEvent) => {
+			const target = event.target as HTMLElement;
+			const markEl = (
+				target.closest
+					? target.closest(
+							'mark.hl-yellow, mark.hl-green, mark.hl-cyan, mark.hl-pink, mark.hl-orange, mark[class*="hl-"]'
+					  )
+					: null
+			) as HTMLElement | null;
+
+			if (
+				markEl &&
+				(typeof this.bodyEl.contains !== 'function' ||
+					this.bodyEl.contains(markEl))
+			) {
+				if (event.preventDefault) event.preventDefault();
+				if (event.stopPropagation) event.stopPropagation();
+				this.highlightToolbar.showForMark(markEl);
+			}
+		});
+
+		// Dismiss toolbar on clicking outside
+		this.registerDomEvent(this.containerEl, 'mousedown', (event: MouseEvent) => {
+			const target = event.target as HTMLElement;
+			if (
+				this.highlightToolbar.isVisible &&
+				target.closest &&
+				!target.closest('.local-bible-highlight-toolbar')
+			) {
+				this.highlightToolbar.hide();
+			}
+		});
+
+		// Dismiss toolbar on Escape key
+		this.registerDomEvent(
+			this.containerEl,
+			'keydown',
+			(event: KeyboardEvent) => {
+				this.highlightToolbar.handleKeyDown(event);
+			}
+		);
+
 		// Prevent keyboard modifications in read-only view
 		this.registerDomEvent(this.bodyEl, 'keydown', (event: KeyboardEvent) => {
 			if (
@@ -123,6 +223,72 @@ export default class BibleReaderView extends ItemView {
 				event.preventDefault();
 			}
 		});
+	}
+
+	applyHighlight(color: HighlightColor, text: string, range?: Range): void {
+		if (range && typeof document !== 'undefined') {
+			try {
+				const mark = document.createElement('mark');
+				mark.className = `hl-${color}`;
+				range.surroundContents(mark);
+			} catch {
+				try {
+					const mark = document.createElement('mark');
+					mark.className = `hl-${color}`;
+					const contents = range.extractContents();
+					mark.appendChild(contents);
+					range.insertNode(mark);
+				} catch (e) {
+					console.warn('Could not wrap selection in DOM mark:', e);
+				}
+			}
+			if (typeof window !== 'undefined' && window.getSelection) {
+				window.getSelection()?.removeAllRanges();
+			}
+		}
+
+		if (this.currentBook && this.onHighlightChange) {
+			this.onHighlightChange({
+				type: 'create',
+				color,
+				text,
+				book: this.currentBook,
+				chapter: this.currentChapter,
+			});
+		}
+	}
+
+	modifyHighlight(markEl: HTMLElement, newColor: HighlightColor): void {
+		markEl.className = `hl-${newColor}`;
+
+		if (this.currentBook && this.onHighlightChange) {
+			this.onHighlightChange({
+				type: 'modify',
+				color: newColor,
+				markEl,
+				book: this.currentBook,
+				chapter: this.currentChapter,
+			});
+		}
+	}
+
+	removeHighlight(markEl: HTMLElement): void {
+		const parent = markEl.parentElement || markEl.parentNode;
+		if (parent) {
+			while (markEl.firstChild) {
+				parent.insertBefore(markEl.firstChild, markEl);
+			}
+			parent.removeChild(markEl);
+		}
+
+		if (this.currentBook && this.onHighlightChange) {
+			this.onHighlightChange({
+				type: 'remove',
+				markEl,
+				book: this.currentBook,
+				chapter: this.currentChapter,
+			});
+		}
 	}
 
 	/**
@@ -202,6 +368,7 @@ export default class BibleReaderView extends ItemView {
 		);
 
 		this.renderHeader();
+		this.highlightToolbar?.hide();
 
 		this.bodyEl.empty();
 
