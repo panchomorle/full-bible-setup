@@ -8,6 +8,7 @@ following the Single Source of Truth (SSOT) architecture and Obsidian atomic blo
 
 import os
 import json
+from smart_pointers import build_anchor_registry, transform_comment_text
 
 VAULT_DEFAULT_PATH = os.path.abspath(r'C:\Users\eljua\Documents\UAP\70. Bible\Comentarios\EGW')
 
@@ -21,6 +22,7 @@ def sort_range_key(key):
 
 def generate_egw_notes(dataset, target_vault_path=VAULT_DEFAULT_PATH):
     os.makedirs(target_vault_path, exist_ok=True)
+    registry = build_anchor_registry(dataset)
     total_files = 0
     total_blocks = 0
 
@@ -38,6 +40,7 @@ def generate_egw_notes(dataset, target_vault_path=VAULT_DEFAULT_PATH):
                 "tipo: comentario",
                 "autor: Elena G. de White",
                 "fuente: CBA Tomo 7A",
+                'badge: "🕊️"',
                 f"libro: {book_name}",
                 f"capitulo: {ch}",
                 "---",
@@ -72,7 +75,8 @@ def generate_egw_notes(dataset, target_vault_path=VAULT_DEFAULT_PATH):
                             content.append(f"> **{it['title']}**")
                             content.append(">")
 
-                    text_body = it.get('text', '').strip()
+                    raw_text = it.get('text', '').strip()
+                    text_body = transform_comment_text(book_name, ch, raw_text, registry)
                     # Add callout prefix to lines
                     for text_line in text_body.split('\n'):
                         content.append(f"> {text_line}")

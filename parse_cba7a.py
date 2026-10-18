@@ -243,7 +243,7 @@ def parse_cba7a(raw_file_path):
                 continue
 
             # Check chapter header
-            m_ch = re.match(r'^(?:CAP[IÍ]TULO|Cap[ií]tulo)S?\s+(\d+)', l)
+            m_ch = re.match(r'^(?:CAP[IÍ]TULO|Cap[ií]tulo|SALMOS?|Salmos?)S?\s+(\d+)', l)
             if m_ch:
                 flush_comment(curr_chapter, curr_verses, curr_range_key, curr_title, curr_text)
                 curr_chapter = int(m_ch.group(1))
@@ -279,6 +279,8 @@ def parse_cba7a(raw_file_path):
                     curr_verses = v_list if v_list else [1]
                     min_v, max_v = min(curr_verses), max(curr_verses)
                     curr_range_key = str(min_v) if min_v == max_v else f"{min_v}-{max_v}"
+                    if book_name == '1 Timoteo' and curr_chapter == 2 and 16 in curr_verses:
+                        curr_chapter = 3
                     continue
 
             # Check title line ending with '.-'
