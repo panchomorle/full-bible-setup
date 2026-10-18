@@ -405,6 +405,8 @@ export default class BibleSearchEngine {
 
 			// Strip footnote markers e.g. [^ref_1]
 			vText = vText.replace(/\[\^[^\]]+\]/g, '').trim();
+			// Strip wikilink commentary badges e.g. [[Génesis 1 (EGW)#^egw-1-1|🕊️]]
+			vText = vText.replace(/\[\[[^\]]+\]\]/g, '').trim();
 			// Strip trailing whitespace or stray markdown characters
 			vText = vText.replace(/\s+/g, ' ');
 
@@ -455,7 +457,9 @@ export default class BibleSearchEngine {
 	private resolveFirstVersion(): string {
 		const folder = this.app.vault.getFolderByPath(this.settings.biblesPath);
 		return (
-			folder?.children?.filter((c) => 'children' in c)?.first()?.name ?? ''
+			folder?.children
+				?.filter((c) => 'children' in c && c.name.toLowerCase() !== 'comentarios')
+				?.first()?.name ?? ''
 		);
 	}
 }

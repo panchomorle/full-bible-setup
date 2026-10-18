@@ -17,6 +17,14 @@ import BibleReaderView, {
 	VIEW_TYPE_BIBLE_READER,
 	BibleReaderTarget,
 } from 'src/bible-reader-view';
+import BibleMerger, {
+	parseCommentaryContent,
+	mergeChapterContent,
+} from 'src/bible-merger';
+import HighlightToolbar, {
+	HIGHLIGHT_PALETTE,
+	HighlightColor,
+} from 'src/highlight-toolbar';
 export {
 	PassageReference,
 	PassageResolver,
@@ -29,8 +37,13 @@ export {
 	BIBLE_BOOK_CHAPTERS,
 	BibleReaderView,
 	VIEW_TYPE_BIBLE_READER,
+	BibleMerger,
+	parseCommentaryContent,
+	mergeChapterContent,
+	HighlightToolbar,
+	HIGHLIGHT_PALETTE,
 };
-export type { BibleReaderTarget };
+export type { BibleReaderTarget, HighlightColor };
 import PassageSuggest from 'src/passage-suggest';
 import QuickVerseSearchModal from 'src/quick-search-modal';
 import SwitchVersionModal from 'src/switch-version-modal';

@@ -15,6 +15,7 @@ import { CalloutType, QuoteReferencePosition } from './settings';
 import VersionSuggest from './version-suggest';
 import { SettingsLabels } from './i18n/models';
 import { I18N } from './i18n';
+import BibleMerger from './bible-merger';
 
 export default class LocalBibleRefSettingTab extends PluginSettingTab {
 	private readonly settingClass = 'local-bible-ref-setting';
@@ -314,6 +315,112 @@ export default class LocalBibleRefSettingTab extends PluginSettingTab {
 							})
 					)
 			);
+
+		// Bible & Commentary Merger section
+		let selectedBase = '';
+		let selectedCommentary = '';
+		let customBadge = '🕊️';
+
+		const merger = new BibleMerger(this.app, this.plugin.settings.biblesPath);
+		const availableBibles = merger.getAvailableBaseBibles();
+		const availableCommentaries = merger.getAvailableCommentaries();
+
+		if (availableBibles.length > 0) selectedBase = availableBibles[0];
+		if (availableCommentaries.length > 0) selectedCommentary = availableCommentaries[0];
+
+		const mergerGroup = new SettingGroup(containerEl).setHeading(
+			'Fusionar Biblia y Comentarios / Bible & Commentary Merger'
+		);
+
+		mergerGroup.addSetting((setting) =>
+			setting
+				.setName('Traducción bíblica base / Base Bible')
+				.setDesc('Selecciona la traducción base que se utilizará como texto canónico sin modificar.')
+				.setClass(this.settingClass)
+				.addDropdown((dropdown) => {
+					availableBibles.forEach((b) => dropdown.addOption(b, b));
+					if (selectedBase) dropdown.setValue(selectedBase);
+					dropdown.onChange((val) => {
+						selectedBase = val;
+					});
+				})
+		);
+
+		mergerGroup.addSetting((setting) =>
+			setting
+				.setName('Colección de comentarios / Commentary Collection')
+				.setDesc('Selecciona el corpus de notas de comentario ubicado en Comentarios/.')
+				.setClass(this.settingClass)
+				.addDropdown((dropdown) => {
+					availableCommentaries.forEach((c) => dropdown.addOption(c, c));
+					if (selectedCommentary) dropdown.setValue(selectedCommentary);
+					dropdown.onChange((val) => {
+						selectedCommentary = val;
+					});
+				})
+		);
+
+		mergerGroup.addSetting((setting) =>
+			setting
+				.setName('Insignia / Badge Icon')
+				.setDesc('Emoji o texto breve que identificará las notas en el texto bíblico (por defecto: 🕊️).')
+				.setClass(this.settingClass)
+				.addText((text) => {
+					text.setValue(customBadge).onChange((val) => {
+						customBadge = val.trim() || '🕊️';
+					});
+				})
+		);
+
+		mergerGroup.addSetting((setting) => {
+			setting
+				.setName('Iniciar fusión / Start Merge')
+				.setDesc('Genera la edición de estudio derivada (ej. RVG (EGW)) en una carpeta separada sin alterar la Biblia base.')
+				.setClass(this.settingClass)
+				.addButton((btn) => {
+					btn
+						.setButtonText('Fusionar / Merge')
+						.setCta()
+						.onClick(async () => {
+							if (!selectedBase || !selectedCommentary) {
+								new Notice('Debes seleccionar una Biblia base y un comentario.');
+								return;
+							}
+							btn.setDisabled(true);
+							btn.setButtonText('Fusionando...');
+							const progressNotice = new Notice('Iniciando fusión...', 0);
+
+							try {
+								const result = await merger.merge({
+									baseBibleFolder: selectedBase,
+									commentaryFolder: selectedCommentary,
+									defaultBadge: customBadge,
+									onProgress: (_curr, _total, msg) => {
+										progressNotice.setMessage(msg);
+									},
+								});
+
+								progressNotice.hide();
+
+								if (result.success) {
+									new Notice(
+										`¡Fusión completada con éxito! Se crearon ${result.totalChaptersMerged} capítulos con ${result.totalBadgesInjected} insignias de comentarios.`,
+										8000
+									);
+									this.display();
+								} else {
+									new Notice(`Error al fusionar: ${result.error}`, 8000);
+								}
+							} catch (err: any) {
+								progressNotice.hide();
+								new Notice(`Error inesperado al fusionar: ${err?.message || err}`, 8000);
+							} finally {
+								btn.setDisabled(false);
+								btn.setButtonText('Fusionar / Merge');
+							}
+						});
+				});
+		});
 
 		// just acts as a spacer for the issues link
 		new Setting(containerEl).setHeading();

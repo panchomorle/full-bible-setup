@@ -19,7 +19,8 @@ export default class SwitchVersionModal extends SuggestModal<string> {
 
 		const subfolders = folder.children
 			.filter((c): c is TFolder => c instanceof TFolder)
-			.map((f) => f.name);
+			.map((f) => f.name)
+			.filter((name) => name.toLowerCase() !== 'comentarios');
 
 		const q = query.toLowerCase().trim();
 		if (!q) return subfolders;
