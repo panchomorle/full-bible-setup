@@ -25,6 +25,10 @@ import HighlightToolbar, {
 	HIGHLIGHT_PALETTE,
 	HighlightColor,
 } from 'src/highlight-toolbar';
+import HighlightMutator, {
+	HighlightOptions,
+	HighlightAction,
+} from 'src/highlight-mutator';
 export {
 	PassageReference,
 	PassageResolver,
@@ -42,8 +46,9 @@ export {
 	mergeChapterContent,
 	HighlightToolbar,
 	HIGHLIGHT_PALETTE,
+	HighlightMutator,
 };
-export type { BibleReaderTarget, HighlightColor };
+export type { BibleReaderTarget, HighlightColor, HighlightOptions, HighlightAction };
 import PassageSuggest from 'src/passage-suggest';
 import QuickVerseSearchModal from 'src/quick-search-modal';
 import SwitchVersionModal from 'src/switch-version-modal';

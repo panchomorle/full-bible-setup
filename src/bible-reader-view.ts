@@ -14,6 +14,10 @@ import {
 	resolveBook,
 } from './adjacent-chapter';
 import HighlightToolbar, { HighlightColor } from './highlight-toolbar';
+import HighlightMutator, {
+	HighlightAction,
+	HighlightOptions,
+} from './highlight-mutator';
 
 export const VIEW_TYPE_BIBLE_READER = 'local-bible-reader-view';
 
@@ -43,6 +47,7 @@ export default class BibleReaderView extends ItemView {
 	private currentVersion: string = '';
 	private currentFilePath: string = '';
 	private isContentLoaded: boolean = false;
+	private isMutatingFile: boolean = false;
 
 	public highlightToolbar: HighlightToolbar;
 	public onHighlightChange?: (action: {
@@ -81,6 +86,19 @@ export default class BibleReaderView extends ItemView {
 	async onload() {
 		super.onload();
 		this.buildLayout();
+
+		if (this.app?.vault?.on) {
+			this.registerEvent(
+				this.app.vault.on('modify', async (file: TFile) => {
+					if (file && file.path === this.currentFilePath) {
+						if (this.isMutatingFile) {
+							return;
+						}
+						await this.refreshContentPreservingScroll();
+					}
+				})
+			);
+		}
 	}
 
 	private buildLayout() {
@@ -225,7 +243,30 @@ export default class BibleReaderView extends ItemView {
 		});
 	}
 
-	applyHighlight(color: HighlightColor, text: string, range?: Range): void {
+	async applyHighlight(
+		color: HighlightColor,
+		text: string,
+		range?: Range
+	): Promise<void> {
+		let verse: number | undefined;
+		let prefix: string | undefined;
+		let suffix: string | undefined;
+
+		if (range) {
+			verse = this.getPrecedingVerse(range.startContainer);
+			if (range.startContainer && range.startContainer.textContent) {
+				const startText = range.startContainer.textContent;
+				prefix = startText.slice(
+					Math.max(0, range.startOffset - 30),
+					range.startOffset
+				);
+			}
+			if (range.endContainer && range.endContainer.textContent) {
+				const endText = range.endContainer.textContent;
+				suffix = endText.slice(range.endOffset, range.endOffset + 30);
+			}
+		}
+
 		if (range && typeof document !== 'undefined') {
 			try {
 				const mark = document.createElement('mark');
@@ -247,6 +288,13 @@ export default class BibleReaderView extends ItemView {
 			}
 		}
 
+		await this.persistHighlightChange({
+			type: 'create',
+			text,
+			color,
+			options: { verse, prefix, suffix },
+		});
+
 		if (this.currentBook && this.onHighlightChange) {
 			this.onHighlightChange({
 				type: 'create',
@@ -258,8 +306,23 @@ export default class BibleReaderView extends ItemView {
 		}
 	}
 
-	modifyHighlight(markEl: HTMLElement, newColor: HighlightColor): void {
+	async modifyHighlight(
+		markEl: HTMLElement,
+		newColor: HighlightColor
+	): Promise<void> {
+		const text = markEl.textContent || '';
+		const verse = this.getPrecedingVerse(markEl);
+		const prefix = markEl.previousSibling?.textContent?.slice(-30);
+		const suffix = markEl.nextSibling?.textContent?.slice(0, 30);
+
 		markEl.className = `hl-${newColor}`;
+
+		await this.persistHighlightChange({
+			type: 'modify',
+			text,
+			color: newColor,
+			options: { verse, prefix, suffix },
+		});
 
 		if (this.currentBook && this.onHighlightChange) {
 			this.onHighlightChange({
@@ -272,7 +335,12 @@ export default class BibleReaderView extends ItemView {
 		}
 	}
 
-	removeHighlight(markEl: HTMLElement): void {
+	async removeHighlight(markEl: HTMLElement): Promise<void> {
+		const text = markEl.textContent || '';
+		const verse = this.getPrecedingVerse(markEl);
+		const prefix = markEl.previousSibling?.textContent?.slice(-30);
+		const suffix = markEl.nextSibling?.textContent?.slice(0, 30);
+
 		const parent = markEl.parentElement || markEl.parentNode;
 		if (parent) {
 			while (markEl.firstChild) {
@@ -280,6 +348,12 @@ export default class BibleReaderView extends ItemView {
 			}
 			parent.removeChild(markEl);
 		}
+
+		await this.persistHighlightChange({
+			type: 'remove',
+			text,
+			options: { verse, prefix, suffix },
+		});
 
 		if (this.currentBook && this.onHighlightChange) {
 			this.onHighlightChange({
@@ -289,6 +363,83 @@ export default class BibleReaderView extends ItemView {
 				chapter: this.currentChapter,
 			});
 		}
+	}
+
+	private async persistHighlightChange(
+		action: HighlightAction
+	): Promise<void> {
+		if (!this.currentBook) return;
+		const file = this.resolveChapterFile(
+			this.currentVersion,
+			this.currentBook,
+			this.currentChapter
+		);
+		if (!file) return;
+
+		this.isMutatingFile = true;
+		try {
+			await HighlightMutator.persistHighlight(
+				this.app.vault,
+				file,
+				action
+			);
+		} catch (err) {
+			console.error('Failed to persist highlight to chapter file:', err);
+		} finally {
+			this.isMutatingFile = false;
+		}
+	}
+
+	private getPrecedingVerse(node: Node | null): number | undefined {
+		if (!node || !this.bodyEl) return undefined;
+		const sups = Array.from(this.bodyEl.querySelectorAll('sup'));
+		let lastSup: HTMLElement | null = null;
+
+		for (const sup of sups) {
+			if (typeof (sup as any).compareDocumentPosition === 'function') {
+				const pos = (sup as any).compareDocumentPosition(node);
+				if (pos & 4 /* Node.DOCUMENT_POSITION_FOLLOWING */) {
+					lastSup = sup as HTMLElement;
+				}
+			}
+		}
+
+		if (lastSup) {
+			const num = parseInt(lastSup.textContent?.trim() || '', 10);
+			if (!isNaN(num)) return num;
+		}
+		return undefined;
+	}
+
+	async refreshContentPreservingScroll(): Promise<void> {
+		if (!this.currentBook || !this.currentFilePath) return;
+		const file = this.app.vault.getFileByPath(this.currentFilePath);
+		if (!file || !('path' in file)) return;
+
+		const currentScroll = this.bodyEl.scrollTop;
+		const rawContent = await this.app.vault.read(file as TFile);
+		const cleanMarkdown = this.stripFrontmatter(rawContent);
+
+		const tempEl =
+			typeof document !== 'undefined'
+				? document.createElement('div')
+				: this.containerEl.createDiv();
+
+		await MarkdownRenderer.renderMarkdown(
+			cleanMarkdown,
+			tempEl,
+			this.currentFilePath,
+			this
+		);
+
+		this.bodyEl.empty();
+		if (tempEl.children) {
+			while (tempEl.firstChild) {
+				this.bodyEl.appendChild(tempEl.firstChild);
+			}
+		}
+
+		this.bodyEl.scrollTop = currentScroll;
 	}
 
 	/**

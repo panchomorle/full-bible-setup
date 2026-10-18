@@ -201,6 +201,9 @@ const mockApp = {
 			const full = path.join(VAULT_ROOT, file.path);
 			return fs.readFileSync(full, 'utf8');
 		},
+		modify: async (file, content) => {
+			mockApp.vault.lastModified = { file, content };
+		},
 	},
 	workspace: {
 		getLeavesOfType: (type) => existingLeaves.filter((l) => l.viewState?.type === type),
@@ -335,6 +338,21 @@ async function runAsyncTests() {
 		// Restore to Exodus 20
 		await view.setState({ bookId: 'exo', chapter: 20 }, null);
 		assert.strictEqual(view.getDisplayText(), 'Éxodo 20');
+	});
+
+	await test('Highlight actions persist changes to disk via vault.modify', async () => {
+		const view = existingLeaves[0].view;
+		await view.openPassage({ bookId: 'gen', chapter: 1 });
+
+		// Apply highlight
+		await view.applyHighlight('yellow', 'En el principio creó Dios');
+		assert.ok(mockApp.vault.lastModified, 'Vault.modify should be called on applyHighlight');
+		assert.ok(
+			mockApp.vault.lastModified.content.includes(
+				'<mark class="hl-yellow">En el principio creó Dios</mark>'
+			),
+			'Content written to disk must contain highlighted mark tag'
+		);
 	});
 
 	console.log(`\nAll ${passed} reader view tests passed!`);
