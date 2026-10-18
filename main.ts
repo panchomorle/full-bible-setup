@@ -5,7 +5,8 @@ import LocalBibleRefSettingTab, {
 import PassageReference, { PassageFormat } from 'src/passage-reference';
 import PassageResolver from 'src/passage-resolver';
 import BibleSearchEngine from 'src/bible-search-engine';
-export { PassageReference, PassageResolver, BibleSearchEngine };
+import OmniboxParser from 'src/omnibox-parser';
+export { PassageReference, PassageResolver, BibleSearchEngine, OmniboxParser };
 import PassageSuggest from 'src/passage-suggest';
 import QuickVerseSearchModal from 'src/quick-search-modal';
 import SwitchVersionModal from 'src/switch-version-modal';

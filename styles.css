@@ -36,3 +36,29 @@ div.setting-item.local-bible-ref-setting.is-disabled {
 	color: var(--text-accent);
 	font-style: italic;
 }
+
+/* Omnibox Dual-Category Styles */
+.local-bible-ref-omnibox-header {
+	font-size: 0.72rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--text-accent);
+	padding: 8px 6px 4px 6px;
+	margin: 6px 0 4px 0;
+	border-bottom: 1px solid var(--background-modifier-border);
+	display: block;
+	pointer-events: none;
+}
+
+.local-bible-ref-quick-header-row {
+	display: flex;
+	align-items: baseline;
+	gap: 6px;
+}
+
+.local-bible-ref-quick-subtitle {
+	font-size: 0.8em;
+	color: var(--text-muted);
+	font-weight: normal;
+}
