@@ -2,8 +2,13 @@ import { Plugin } from 'obsidian';
 import LocalBibleRefSettingTab, {
 	BibleFormat,
 } from 'src/local-bible-ref-setting-tab';
-import { PassageFormat } from 'src/passage-reference';
+import PassageReference, { PassageFormat } from 'src/passage-reference';
+import PassageResolver from 'src/passage-resolver';
+import BibleSearchEngine from 'src/bible-search-engine';
+export { PassageReference, PassageResolver, BibleSearchEngine };
 import PassageSuggest from 'src/passage-suggest';
+import QuickVerseSearchModal from 'src/quick-search-modal';
+import SwitchVersionModal from 'src/switch-version-modal';
 import LocalBibleRefSettings, {
 	CalloutType,
 	QuoteReferencePosition,
@@ -11,11 +16,48 @@ import LocalBibleRefSettings, {
 
 export default class LocalBibleRefPlugin extends Plugin {
 	settings: LocalBibleRefSettings;
+	searchEngine: BibleSearchEngine;
 
 	async onload() {
 		await this.loadSettings();
+		this.searchEngine = new BibleSearchEngine(this.app, this.settings);
 		this.addSettingTab(new LocalBibleRefSettingTab(this.app, this));
 		this.registerEditorSuggest(new PassageSuggest(this.app, this.settings));
+
+		// Build in-memory concordance index asynchronously without blocking UI
+		this.searchEngine.buildIndex();
+
+		this.addRibbonIcon(
+			'book-open',
+			'Buscar pasaje bíblico / Quick Bible Lookup',
+			() => {
+				new QuickVerseSearchModal(this.app, this).open();
+			}
+		);
+
+		this.addCommand({
+			id: 'quick-verse-lookup',
+			name: 'Buscar pasaje o texto bíblico / Quick Bible Lookup',
+			callback: () => {
+				new QuickVerseSearchModal(this.app, this).open();
+			},
+		});
+
+		this.addCommand({
+			id: 'quick-concordance-search',
+			name: 'Concordancia bíblica / Bible Concordance Search',
+			callback: () => {
+				new QuickVerseSearchModal(this.app, this, true).open();
+			},
+		});
+
+		this.addCommand({
+			id: 'switch-default-version',
+			name: 'Cambiar versión bíblica por defecto / Switch default Bible version',
+			callback: () => {
+				new SwitchVersionModal(this.app, this).open();
+			},
+		});
 	}
 
 	onunload() {}

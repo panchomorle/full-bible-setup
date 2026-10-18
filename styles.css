@@ -1,3 +1,38 @@
 div.setting-item.local-bible-ref-setting.is-disabled {
 	opacity: 0.5;
 }
+
+.local-bible-ref-quick-title {
+	font-weight: 600;
+	color: var(--text-accent);
+	margin-bottom: 2px;
+}
+
+.local-bible-ref-quick-excerpt {
+	font-size: 0.9em;
+	color: var(--text-muted);
+}
+
+.local-bible-ref-quick-excerpt mark {
+	background-color: var(--text-highlight-bg, rgba(255, 208, 0, 0.35));
+	color: var(--text-normal);
+	font-weight: 600;
+	border-radius: 2px;
+	padding: 0 2px;
+}
+
+.local-bible-ref-version-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.local-bible-ref-version-name {
+	font-weight: 500;
+}
+
+.local-bible-ref-version-active {
+	font-size: 0.85em;
+	color: var(--text-accent);
+	font-style: italic;
+}

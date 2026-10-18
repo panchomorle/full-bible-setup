@@ -44,24 +44,39 @@ export default class PassageReference
 		const book = this.getBook(match[1]);
 		if (!book) return null;
 
+		const matchedAlias = match[1].trim();
+		const displayBook: Book = {
+			id: book.id,
+			name: matchedAlias.length > 2 ? matchedAlias : book.name,
+			aliases: [...book.aliases],
+		};
+
 		const options = this.parseOptions(
 			match[3],
 			defaultVersionShorthand,
 			defaultPassageFormat
 		);
 
-		return new PassageReference(chapterRef, book, options);
+		return new PassageReference(chapterRef, displayBook, options);
 	}
 
 	/** Builds the passage matching regular expression. */
 	static get regExp(): RegExp {
-		const books = getBooksByLanguage();
-		let regExpString = '^\\-\\- ?(';
-		regExpString += books
-			.map((b) => `${b.name}|${b.aliases.join('|')}`)
+		const books = getPolyglotBooks();
+		const allTokens = new Set<string>();
+		for (const b of books) {
+			allTokens.add(b.name);
+			for (const a of b.aliases) {
+				allTokens.add(a);
+			}
+		}
+		const sorted = Array.from(allTokens)
+			.filter(Boolean)
+			.sort((a, b) => b.length - a.length);
+		const escaped = sorted
+			.map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
 			.join('|');
-		regExpString +=
-			') ?(\\d{1,3}(?::\\d{1,3})?(?: ?\\- ?\\d{1,3}(?::\\d{1,3})?)?)((?: ?\\+\\w+(?::[a-z]+)?){0,2})$';
+		const regExpString = `^\\-\\- ?(${escaped}) ?(\\d{1,3}(?::\\d{1,3})?(?: ?\\- ?\\d{1,3}(?::\\d{1,3})?)?)((?: ?\\+\\w+(?::[a-z]+)?){0,2})$`;
 
 		return new RegExp(regExpString, 'i');
 	}
@@ -151,13 +166,12 @@ export default class PassageReference
 	}
 
 	/** Retrieves a book based on its alias. */
-	private static getBook(alias: string): Book | undefined {
-		const books = getBooksByLanguage();
-		alias = alias.toLowerCase();
+	public static getBook(alias: string): Book | undefined {
+		const books = getPolyglotBooks();
+		const normalized = alias.toLowerCase().trim();
 		return books.find((book) => {
-			const aliases = book.aliases.map((a) => a.toLowerCase());
-			if (book.name.toLowerCase() === alias) return book;
-			if (aliases.includes(alias)) return book;
+			if (book.name.toLowerCase() === normalized) return book;
+			return book.aliases.some((a) => a.toLowerCase() === normalized);
 		});
 	}
 
@@ -208,18 +222,70 @@ export default class PassageReference
 	}
 }
 
-function getBooksByLanguage(): Book[] {
-	switch (getLanguage()) {
-		case 'cs':
-			return I18N.CS.BOOKS;
-		case 'de':
-			return I18N.DE.BOOKS;
-		case 'ko':
-			return I18N.KO.BOOKS;
-		case 'en':
-		default:
-			return I18N.EN.BOOKS;
+export function getPolyglotBooks(): Book[] {
+	let primaryBooks: Book[];
+	try {
+		switch (getLanguage()) {
+			case 'es':
+				primaryBooks = I18N.ES.BOOKS;
+				break;
+			case 'cs':
+				primaryBooks = I18N.CS.BOOKS;
+				break;
+			case 'de':
+				primaryBooks = I18N.DE.BOOKS;
+				break;
+			case 'ko':
+				primaryBooks = I18N.KO.BOOKS;
+				break;
+			case 'en':
+			default:
+				primaryBooks = I18N.EN.BOOKS;
+				break;
+		}
+	} catch {
+		primaryBooks = I18N.EN.BOOKS;
 	}
+
+	const bookMap = new Map<string, Book>();
+
+	for (const book of primaryBooks) {
+		bookMap.set(book.id, {
+			id: book.id,
+			name: book.name,
+			aliases: [...book.aliases],
+		});
+	}
+
+	const extraLanguages: Book[][] = [I18N.EN.BOOKS, I18N.ES.BOOKS];
+	for (const langBooks of extraLanguages) {
+		for (const book of langBooks) {
+			const existing = bookMap.get(book.id);
+			if (existing) {
+				const aliasSet = new Set(existing.aliases.map((a) => a.toLowerCase()));
+				if (book.name.toLowerCase() !== existing.name.toLowerCase()) {
+					if (!aliasSet.has(book.name.toLowerCase())) {
+						existing.aliases.push(book.name);
+						aliasSet.add(book.name.toLowerCase());
+					}
+				}
+				for (const alias of book.aliases) {
+					if (!aliasSet.has(alias.toLowerCase())) {
+						existing.aliases.push(alias);
+						aliasSet.add(alias.toLowerCase());
+					}
+				}
+			} else {
+				bookMap.set(book.id, {
+					id: book.id,
+					name: book.name,
+					aliases: [...book.aliases],
+				});
+			}
+		}
+	}
+
+	return Array.from(bookMap.values());
 }
 
 export enum PassageFormat {
