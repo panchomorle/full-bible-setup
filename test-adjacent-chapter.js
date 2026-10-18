@@ -56,7 +56,7 @@ if (!adjacentModule || !adjacentModule.getAdjacentChapter) {
 	process.exit(1);
 }
 
-const { getAdjacentChapter, getBookChapterCount } = adjacentModule;
+const { getAdjacentChapter, getBookChapterCount, BIBLE_BOOK_ORDER, BIBLE_BOOK_CHAPTERS } = adjacentModule;
 
 // Test cases
 let passed = 0;
@@ -146,6 +146,52 @@ test('Chapter counts are accurate across all 66 books', () => {
 	assert.strictEqual(getBookChapterCount('psa'), 150);
 	assert.strictEqual(getBookChapterCount('rev'), 22);
 	assert.strictEqual(getBookChapterCount('oba'), 1);
+});
+
+test('Verifies boundary navigation forward and backward across all 66 books', () => {
+	assert.strictEqual(BIBLE_BOOK_ORDER.length, 66, 'There should be 66 canonical books');
+
+	for (let i = 0; i < BIBLE_BOOK_ORDER.length; i++) {
+		const bookId = BIBLE_BOOK_ORDER[i];
+		const totalChapters = BIBLE_BOOK_CHAPTERS[bookId];
+		assert.ok(totalChapters > 0, `Book ${bookId} must have at least 1 chapter`);
+
+		// 1. First chapter backwards transition
+		const prev = getAdjacentChapter(bookId, 1, 'prev');
+		if (i === 0) {
+			assert.strictEqual(prev, null, `Genesis 1 should have no prev chapter`);
+		} else {
+			const expectedPrevBookId = BIBLE_BOOK_ORDER[i - 1];
+			const expectedPrevChapters = BIBLE_BOOK_CHAPTERS[expectedPrevBookId];
+			assert.ok(prev, `${bookId} 1 prev should exist`);
+			assert.strictEqual(prev.book.id, expectedPrevBookId, `${bookId} 1 prev book should be ${expectedPrevBookId}`);
+			assert.strictEqual(prev.chapter, expectedPrevChapters, `${bookId} 1 prev chapter should be ${expectedPrevChapters}`);
+		}
+
+		// 2. Last chapter forwards transition
+		const next = getAdjacentChapter(bookId, totalChapters, 'next');
+		if (i === BIBLE_BOOK_ORDER.length - 1) {
+			assert.strictEqual(next, null, `Revelation ${totalChapters} should have no next chapter`);
+		} else {
+			const expectedNextBookId = BIBLE_BOOK_ORDER[i + 1];
+			assert.ok(next, `${bookId} ${totalChapters} next should exist`);
+			assert.strictEqual(next.book.id, expectedNextBookId, `${bookId} ${totalChapters} next book should be ${expectedNextBookId}`);
+			assert.strictEqual(next.chapter, 1, `${bookId} ${totalChapters} next chapter should be 1`);
+		}
+
+		// 3. Intra-book navigation for books with multiple chapters
+		if (totalChapters > 1) {
+			const nextMid = getAdjacentChapter(bookId, 1, 'next');
+			assert.ok(nextMid);
+			assert.strictEqual(nextMid.book.id, bookId);
+			assert.strictEqual(nextMid.chapter, 2);
+
+			const prevMid = getAdjacentChapter(bookId, totalChapters, 'prev');
+			assert.ok(prevMid);
+			assert.strictEqual(prevMid.book.id, bookId);
+			assert.strictEqual(prevMid.chapter, totalChapters - 1);
+		}
+	}
 });
 
 console.log(`\nAll ${passed} tests passed!`);

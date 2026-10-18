@@ -6,7 +6,9 @@
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-		"test": "node test-parser.js && node test-adjacent-chapter.js && node test-reader-view.js && node test-merger.js && node test-highlight-toolbar.js && node test-highlight-mutator.js",
+		"sync": "node sync-vault.js",
+		"build:sync": "npm run build && npm run sync",
+		"test": "node test-parser.js && node test-adjacent-chapter.js && node test-reader-view.js && node test-merger.js && node test-highlight-toolbar.js && node test-highlight-mutator.js && node test-omnibox.js && node test-integration-modal-reader.js && node test-resolver.js",
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
 	},
 	"keywords": [],

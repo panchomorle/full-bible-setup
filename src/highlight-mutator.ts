@@ -352,13 +352,29 @@ export class HighlightMutator {
 		needle: string,
 		options?: HighlightOptions
 	): RegExpExecArray | null {
-		// 1. Direct exact match
 		const escapedNeedle = this.escapeRegex(needle);
-		const exactRegex = new RegExp(escapedNeedle, 'g');
-		let match = this.selectBestMatch(haystack, exactRegex, options);
+
+		// 1. Check if the exact needle is already wrapped in a <mark> tag
+		const wrappedRegex = new RegExp(
+			`<mark\\s+class="hl-[a-z]+"[^>]*>\\s*${escapedNeedle}\\s*<\\/mark>`,
+			'gi'
+		);
+		let match = this.selectBestMatch(haystack, wrappedRegex, options);
 		if (match) return match;
 
-		// 2. Fuzzy match allowing optional existing <mark> tags inside
+		// 2. Direct exact match (only when NOT already inside an existing <mark>)
+		const exactRegex = new RegExp(escapedNeedle, 'g');
+		match = this.selectBestMatch(haystack, exactRegex, options);
+		if (match) {
+			const prefix = haystack.slice(0, match.index);
+			const openMarks = (prefix.match(/<mark\b[^>]*>/gi) || []).length;
+			const closeMarks = (prefix.match(/<\/mark>/gi) || []).length;
+			if (openMarks <= closeMarks) {
+				return match;
+			}
+		}
+
+		// 3. Fuzzy match allowing optional existing <mark> tags inside or overlapping
 		const fuzzyRegex = this.buildFuzzyMarkRegex(needle);
 		return this.selectBestMatch(haystack, fuzzyRegex, options);
 	}

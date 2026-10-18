@@ -47,6 +47,7 @@ export {
 	HighlightToolbar,
 	HIGHLIGHT_PALETTE,
 	HighlightMutator,
+	QuickVerseSearchModal,
 };
 export type { BibleReaderTarget, HighlightColor, HighlightOptions, HighlightAction };
 import PassageSuggest from 'src/passage-suggest';

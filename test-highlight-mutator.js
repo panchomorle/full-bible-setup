@@ -272,6 +272,74 @@ test('Unwraps highlight completely, restoring raw Markdown', () => {
 	);
 });
 
+// 9. Idempotency of Highlight Operations
+test('Highlight injection is idempotent when applied repeatedly with same color', () => {
+	const raw = '<sup>1</sup> Pablo, llamado a ser apóstol de Jesucristo.';
+	const once = HighlightMutator.injectHighlight(raw, 'llamado a ser apóstol', 'yellow');
+	const twice = HighlightMutator.injectHighlight(once, 'llamado a ser apóstol', 'yellow');
+	const thrice = HighlightMutator.injectHighlight(twice, 'llamado a ser apóstol', 'yellow');
+
+	assert.strictEqual(once, '<sup>1</sup> Pablo, <mark class="hl-yellow">llamado a ser apóstol</mark> de Jesucristo.');
+	assert.strictEqual(twice, once);
+	assert.strictEqual(thrice, once);
+});
+
+test('Highlight re-coloring is idempotent when applied repeatedly with same color', () => {
+	const initial = '<sup>1</sup> Pablo, <mark class="hl-yellow">llamado a ser apóstol</mark> de Jesucristo.';
+	const once = HighlightMutator.modifyHighlight(initial, 'llamado a ser apóstol', 'green');
+	const twice = HighlightMutator.modifyHighlight(once, 'llamado a ser apóstol', 'green');
+	const thrice = HighlightMutator.modifyHighlight(twice, 'llamado a ser apóstol', 'green');
+
+	assert.strictEqual(once, '<sup>1</sup> Pablo, <mark class="hl-green">llamado a ser apóstol</mark> de Jesucristo.');
+	assert.strictEqual(twice, once);
+	assert.strictEqual(thrice, once);
+});
+
+test('Highlight removal (unmarking) is idempotent', () => {
+	const raw = '<sup>1</sup> Pablo, llamado a ser apóstol de Jesucristo.';
+	const highlighted = '<sup>1</sup> Pablo, <mark class="hl-pink">llamado a ser apóstol</mark> de Jesucristo.';
+
+	// Removing on highlighted text
+	const once = HighlightMutator.removeHighlight(highlighted, 'llamado a ser apóstol');
+	assert.strictEqual(once, raw);
+
+	// Removing on already clean text produces same result without error or mutation
+	const twice = HighlightMutator.removeHighlight(once, 'llamado a ser apóstol');
+	assert.strictEqual(twice, raw);
+});
+
+// 10. Tag protection and idempotency across verse boundaries
+test('Protects tags and maintains idempotency across verse boundaries', () => {
+	const raw = '<sup>1</sup> En el principio era el Verbo, y el Verbo era con Dios,[^ref_1] <sup>2</sup> y el Verbo era Dios.';
+	const targetPhrase = 'con Dios,[^ref_1] <sup>2</sup> y el Verbo';
+
+	// 10a. Injection across verse boundary
+	const injected = HighlightMutator.injectHighlight(raw, targetPhrase, 'cyan');
+	assert.strictEqual(
+		injected,
+		'<sup>1</sup> En el principio era el Verbo, y el Verbo era <mark class="hl-cyan">con Dios,</mark>[^ref_1] <sup>2</sup> <mark class="hl-cyan">y el Verbo</mark> era Dios.'
+	);
+
+	// 10b. Idempotent re-injection across boundary
+	const reInjected = HighlightMutator.injectHighlight(injected, targetPhrase, 'cyan');
+	assert.strictEqual(reInjected, injected);
+
+	// 10c. Re-coloring across boundary
+	const reColored = HighlightMutator.modifyHighlight(injected, targetPhrase, 'orange');
+	assert.strictEqual(
+		reColored,
+		'<sup>1</sup> En el principio era el Verbo, y el Verbo era <mark class="hl-orange">con Dios,</mark>[^ref_1] <sup>2</sup> <mark class="hl-orange">y el Verbo</mark> era Dios.'
+	);
+
+	// 10d. Unmarking across boundary restores pristine raw markdown
+	const unmarked = HighlightMutator.removeHighlight(reColored, targetPhrase);
+	assert.strictEqual(unmarked, raw);
+
+	// 10e. Idempotent unmarking
+	const unmarkedAgain = HighlightMutator.removeHighlight(unmarked, targetPhrase);
+	assert.strictEqual(unmarkedAgain, raw);
+});
+
 // 9. Integration with Vault modification & reader view
 (async () => {
 	await testAsync('Vault persistence writes mutated markdown to disk via app.vault.modify', async () => {
